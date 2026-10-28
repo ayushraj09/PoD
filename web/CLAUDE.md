@@ -3,3 +3,4 @@
 - Read contracts/api.md, contracts/scoring.md before touching data or labels.
 - Never call the backend from founders' sites directly; the widget is always an iframe of /w/[slug].
 - Server-only secrets (service key, Dodo keys) never go in NEXT_PUBLIC_ variables.
+- Next.js 16: middleware is `proxy.ts`; `params`, `searchParams`, `cookies()` are async.
