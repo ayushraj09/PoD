@@ -1,0 +1,25 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+backend/models/
+
+# node
+node_modules/
+.next/
+out/
+
+# audio (short test samples are added explicitly with git add -f)
+*.wav
+*.webm
+
+# misc
+.DS_Store
+.claude/settings.local.json

@@ -46,7 +46,8 @@ proof-of-demand/
 │   └── migrations/
 │       ├── 001_init.sql       # created together in Stage 0
 │       ├── a_002_voice_match.sql
-│       └── b_002_funnel_view.sql
+│       ├── b_002_policies.sql
+│       └── b_003_funnel_view.sql
 ├── backend/                   # Member A
 │   ├── CLAUDE.md
 │   ├── Dockerfile
@@ -184,7 +185,7 @@ CORS: allow only `WEB_ORIGIN`. The widget runs inside an iframe on B's domain, s
   - `verified`: trust_score ≥ 70
   - `suspicious`: 40–69
   - `fake`: < 40
-  - `unverified`: no voice answer given
+  - `unverified`: no voice answer given, or scoring failed (`processing_error`); `trust_score` is null
 - `pain_score` 0–100. Levels: **high** ≥ 70, **medium** 40–69, **low** < 40.
 - `flags` is a JSON list of objects `{"code": "...", "detail": "..."}`. Codes:
 

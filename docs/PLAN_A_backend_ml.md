@@ -46,7 +46,8 @@ proof-of-demand/
 │   └── migrations/
 │       ├── 001_init.sql       # created together in Stage 0
 │       ├── a_002_voice_match.sql
-│       └── b_002_funnel_view.sql
+│       ├── b_002_policies.sql
+│       └── b_003_funnel_view.sql
 ├── backend/                   # Member A
 │   ├── CLAUDE.md
 │   ├── Dockerfile
@@ -184,7 +185,7 @@ CORS: allow only `WEB_ORIGIN`. The widget runs inside an iframe on B's domain, s
   - `verified`: trust_score ≥ 70
   - `suspicious`: 40–69
   - `fake`: < 40
-  - `unverified`: no voice answer given
+  - `unverified`: no voice answer given, or scoring failed (`processing_error`); `trust_score` is null
 - `pain_score` 0–100. Levels: **high** ≥ 70, **medium** 40–69, **low** < 40.
 - `flags` is a JSON list of objects `{"code": "...", "detail": "..."}`. Codes:
 
@@ -610,7 +611,7 @@ backend/
   | `too_short` / `no_speech` | −40 |
 
   Clamp the result to 0–100, then map it to `human_verdict` per `contracts/scoring.md`. No audio → `unverified` and `trust_score = null`.
-- `pipeline/run.py`: run all steps in order. Set `status=processing` at the start and `scored` at the end. On any exception: `status=scored` (or `failed`), add the `processing_error` flag, and log it. **Never leave a row stuck in processing.**
+- `pipeline/run.py`: run all steps in order. Set `status=processing` at the start and `scored` at the end. On any exception: `status=scored`, `human_verdict=unverified`, add the `processing_error` flag, and log it. **Never leave a row stuck in processing.**
 - `pipeline/notify.py`: send `signup.scored` per `contracts/events.md` if `NOTIFY_WEBHOOK_URL` is set (5 s timeout, never crash on failure).
 
 **Output:** end-to-end on live URLs. Record in B's widget → within ~15 s the row shows transcript, pain score, quote, flags, verdict. **Commit.**
@@ -625,6 +626,7 @@ backend/
 
 **Build**
 - Load models at startup and run one warm-up call so the first real signup isn't slow. `/health` reports `models_loaded`.
+- On startup, re-queue every signup still `pending` or `processing` (background tasks are lost when Render restarts; TOOLS_VERIFIED.md §11).
 - Limits: reject audio over 3 MB or 30 s, STT timeout, AI timeout, one retry each.
 - Logging: one line per signup per step with timing, so you can debug real users quickly on Friday.
 - **Demo seed script** `python -m scripts.seed_demo`: creates waitlist `demo-ring` with 3 genuine signups (different people, specific pain), 5 signups using **one voice** with 5 different emails, 2 disposable emails, and 2 generic "sounds cool" answers. This produces a striking funnel for the judges.
