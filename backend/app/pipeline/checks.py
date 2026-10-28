@@ -1,4 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
+from disposable_email_domains import blocklist
 from email_validator import EmailNotValidError, caching_resolver, validate_email
+
+from app import db
+
+REPEAT_IP_MIN = 3          # this many signups (including this one) from one network...
+REPEAT_IP_WINDOW = timedelta(hours=24)  # ...within this window
 
 _resolver = None
 
@@ -17,3 +25,33 @@ def normalize_email(email: str, check_dns: bool = True) -> str:
     except EmailNotValidError as e:
         raise InvalidEmail(str(e)) from e
     return info.normalized.lower()
+
+
+def is_disposable(email: str) -> bool:
+    domain = email.rsplit("@", 1)[-1].lower()
+    # the list holds second-level domains only: mail.xyz.com is checked as xyz.com
+    return domain in blocklist or ".".join(domain.split(".")[-2:]) in blocklist
+
+
+def flag(code: str, detail: str = "") -> dict:
+    return {"code": code, "detail": detail}
+
+
+def basic_checks(signup: dict) -> list[dict]:
+    flags = []
+    if is_disposable(signup["email"]):
+        flags.append(flag("disposable_email", signup["email"].rsplit("@", 1)[-1]))
+
+    if signup.get("device_id"):
+        other = db.other_signup_with(signup["waitlist_id"], "device_id", signup["device_id"],
+                                     signup["id"])
+        if other:
+            flags.append(flag("repeat_device", other["id"]))
+
+    if signup.get("ip_hash"):
+        since = datetime.now(timezone.utc) - REPEAT_IP_WINDOW
+        others = db.count_signups_since(signup["waitlist_id"], "ip_hash", signup["ip_hash"],
+                                        since, exclude_id=signup["id"])
+        if others + 1 >= REPEAT_IP_MIN:
+            flags.append(flag("repeat_ip", f"{others + 1} signups in 24h"))
+    return flags
