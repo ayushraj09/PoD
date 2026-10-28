@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     tg_graph: str = "pod"
     tg_secret: str = ""
 
+    ffmpeg_bin: str = "ffmpeg"
+
     # intake
     max_audio_bytes: int = 3 * 1024 * 1024
     rate_limit_per_hour: int = 10

@@ -4,6 +4,11 @@ from datetime import datetime, timezone
 os.environ.setdefault("LOAD_MODELS", "false")
 os.environ.setdefault("CHECK_EMAIL_DNS", "false")
 os.environ.setdefault("WEB_ORIGIN", "http://localhost:3000")
+try:  # optional static ffmpeg for laptops whose system ffmpeg is broken
+    import imageio_ffmpeg
+    os.environ.setdefault("FFMPEG_BIN", imageio_ffmpeg.get_ffmpeg_exe())
+except ImportError:
+    pass
 
 import pytest
 
