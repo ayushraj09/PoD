@@ -24,5 +24,9 @@ def load() -> None:
         savedir="models/ecapa",
         run_opts={"device": "cpu"},
     )
+    import torch
+
+    with torch.no_grad():  # warm-up so the first real signup isn't slow
+        encoder.encode_batch(torch.zeros(1, 16000))
     loaded = True
     log.info("speaker encoder loaded")

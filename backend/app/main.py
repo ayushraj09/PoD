@@ -1,4 +1,5 @@
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import models
 from app.config import get_settings
+from app.pipeline.run import requeue_stuck
 from app.routes import signups
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -14,6 +16,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.load()
+    if get_settings().supabase_url:
+        threading.Thread(target=requeue_stuck, daemon=True).start()
     yield
 
 
