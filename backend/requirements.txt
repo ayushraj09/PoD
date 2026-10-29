@@ -14,4 +14,5 @@ soundfile==0.14.0
 torch==2.15.0
 torchaudio==2.11.1
 speechbrain==1.1.2
+pyTigerGraph==2.0.5
 pytest==9.2.0

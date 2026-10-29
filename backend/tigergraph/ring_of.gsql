@@ -1,0 +1,23 @@
+// Connected group around one signup, walking only strong links: shared devices and matching
+// voices. Shared networks (venue Wi-Fi) and email domains (gmail.com) are stored for the
+// explorer view but not walked, or every signup at one event would form a single "ring".
+// Install:  USE GRAPH pod  then paste this, then  INSTALL QUERY ring_of
+CREATE QUERY ring_of(VERTEX<Signup> seed, INT max_hops = 6) FOR GRAPH pod {
+  OrAccum @visited;
+  SetAccum<STRING> @@members;
+  SumAccum<INT> @@voice_links;
+
+  frontier = {seed};
+  frontier = SELECT s FROM (s:frontier)
+             POST-ACCUM s.@visited += TRUE, @@members += s.id;
+
+  WHILE frontier.size() > 0 LIMIT max_hops DO
+    frontier = SELECT t FROM (s:frontier) -[e:USED_DEVICE|SOUNDS_LIKE]- (t)
+               WHERE t.@visited == FALSE
+               ACCUM CASE WHEN e.type == "SOUNDS_LIKE" THEN @@voice_links += 1 END
+               POST-ACCUM t.@visited += TRUE,
+                          CASE WHEN t.type == "Signup" THEN @@members += t.id END;
+  END;
+
+  PRINT @@members AS members, @@voice_links AS voice_links;
+}

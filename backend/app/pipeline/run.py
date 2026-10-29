@@ -10,6 +10,7 @@ from app import db
 from app.pipeline import audio as audio_step
 from app.pipeline import pain, stt, voice
 from app.pipeline.checks import basic_checks, flag
+from app.pipeline.graph import check_ring
 from app.pipeline.notify import send_scored
 from app.pipeline.verdict import decide
 
@@ -94,6 +95,7 @@ def process_signup(signup_id: str) -> None:
              result["human_verdict"], result["trust_score"], result.get("pain_score"),
              [f["code"] for f in flags], (time.perf_counter() - t0) * 1000)
     send_scored({**signup, **result}, waitlist.get("slug", ""))
+    check_ring({**signup, **result})
 
 
 def requeue_stuck() -> None:
