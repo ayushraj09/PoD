@@ -83,3 +83,9 @@ def test_real_answers_are_not_keyword_lists():
         assert pain.looks_like_keyword_list(r["transcript"]) is (r.get("note") == "keyword stuffing"), r
     assert not pain.looks_like_keyword_list("Mera chehra bahut oily hai aur har hafte pimples aate hain")
     assert not pain.looks_like_keyword_list("पिछले महीने मेरी बहन की शादी से पहले चेहरे पर बहुत पिंपल्स आ गए")
+    # real H7 transcript from the human test (Devanagari grammar, English nouns)
+    assert not pain.looks_like_keyword_list(
+        "पिछले महीने एक नया skin care product try किया था और उसके बाद skin पर redness और irritation "
+        "हो गई। फिर मुझे दूसरे products खरीदने पड़े और skin को normal होने में भी time लगा।")
+    assert pain.looks_like_keyword_list("skin care product redness irritation products normal time "
+                                        "money पैसा")

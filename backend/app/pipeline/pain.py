@@ -101,10 +101,14 @@ KEYWORD_LIST = {"pain_score": 5, "pain_reason": "A list of keywords, not an acco
 
 
 def looks_like_keyword_list(transcript: str) -> bool:
-    words = re.findall(r"[a-z']+", transcript.lower())   # Latin script only; Devanagari is skipped
-    if len(words) < KEYWORD_LIST_MIN_WORDS:
+    latin = re.findall(r"[a-z']+", transcript.lower())
+    if len(latin) < KEYWORD_LIST_MIN_WORDS:
         return False
-    return sum(w in _FUNCTION_WORDS for w in words) / len(words) < KEYWORD_LIST_MAX_RATIO
+    # Code-mixed Hindi ("एक नया skin care product try किया था") carries its grammar in Devanagari;
+    # count those words as sentence structure, or every Hinglish answer looks like a keyword list.
+    devanagari = re.findall(r"[\u0900-\u097f]+", transcript)
+    structure = sum(w in _FUNCTION_WORDS for w in latin) + len(devanagari)
+    return structure / (len(latin) + len(devanagari)) < KEYWORD_LIST_MAX_RATIO
 
 
 def looks_like_manipulation(transcript: str) -> bool:
