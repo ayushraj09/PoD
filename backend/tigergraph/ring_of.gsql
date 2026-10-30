@@ -1,8 +1,8 @@
 // Connected group around one signup, walking only strong links: shared devices and matching
 // voices. Shared networks (venue Wi-Fi) and email domains (gmail.com) are stored for the
 // explorer view but not walked, or every signup at one event would form a single "ring".
-// Install:  USE GRAPH pod  then paste this, then  INSTALL QUERY ring_of
-CREATE QUERY ring_of(VERTEX<Signup> seed, INT max_hops = 6) FOR GRAPH pod {
+// Installed by: python -m scripts.tg_setup   (it replaces GRAPH_NAME with TG_GRAPH)
+CREATE QUERY ring_of(VERTEX<Signup> seed, INT max_hops = 6) FOR GRAPH GRAPH_NAME {
   OrAccum @visited;
   SetAccum<STRING> @@members;
   SumAccum<INT> @@voice_links;
