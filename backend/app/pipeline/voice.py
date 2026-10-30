@@ -39,4 +39,6 @@ def similarity(a: list[float], b: list[float]) -> float:
 def same_voice_flags(signup: dict, embedding: list[float]) -> list[dict]:
     matches = db.match_voices(signup["waitlist_id"], embedding, signup["id"],
                               get_settings().voice_match_threshold)
-    return [flag("same_voice", m["id"]) for m in matches[:1]]
+    # only earlier signups: re-scoring the original must not blame it for a later copy
+    earlier = db.created_before([m["id"] for m in matches], signup["created_at"])
+    return [flag("same_voice", m["id"]) for m in matches if m["id"] in earlier][:1]

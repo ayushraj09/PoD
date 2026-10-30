@@ -49,8 +49,9 @@ def test_happy_path(fake_db, stubs, tmp_path):
 
 
 def test_same_voice_and_disposable_is_fake(fake_db, stubs, tmp_path):
+    first = fake_db.add_signup(waitlist_id="wl-acme")
     s = signup_with_audio(fake_db, recording(tmp_path), email="x@mailinator.com")
-    fake_db.voice_matches = [{"id": "earlier", "similarity": 0.9}]
+    fake_db.voice_matches = [{"id": first["id"], "similarity": 0.9}]
     run.process_signup(s["id"])
     row = fake_db.signups[s["id"]]
     assert {f["code"] for f in row["flags"]} == {"disposable_email", "same_voice"}

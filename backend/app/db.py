@@ -86,6 +86,14 @@ def signups_on_domains(waitlist_id: str, domains: list[str]) -> list[dict]:
     return rows
 
 
+def created_before(ids: list[str], before: str) -> set[str]:
+    if not ids:
+        return set()
+    rows = client().table("signups").select("id").in_("id", ids).lt("created_at", before) \
+        .execute().data
+    return {r["id"] for r in rows}
+
+
 def insert_signup(row: dict) -> dict:
     try:
         return client().table("signups").insert(row).execute().data[0]
