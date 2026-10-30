@@ -162,11 +162,19 @@ def main() -> None:
         ring.append(row)
     run.check(any(f["code"] == "same_voice" for f in ring[1].get("flags") or []),
               "same voice #2 -> same_voice flag")
-    time.sleep(3)
-    ring = [db.get_signup(r["id"]) for r in ring if r]
+    def ring_rows():
+        return [db.get_signup(r["id"]) for r in ring if r]
+
+    def all_in_ring(rows):
+        return all(any(f["code"] == "ring_member" for f in r["flags"]) for r in rows)
+
     if get_settings().tg_host:
-        run.check(all(any(f["code"] == "ring_member" for f in r["flags"]) for r in ring),
-                  "all 3 same-voice signups -> ring_member (TigerGraph)")
+        # the ring check runs after scoring and may wait for a suspended workspace to resume
+        end = time.time() + 60
+        while time.time() < end and not all_in_ring(ring_rows()):
+            time.sleep(3)
+        run.check(all_in_ring(ring_rows()), "all 3 same-voice signups -> ring_member (TigerGraph)")
+    ring = ring_rows()
     run.check(all(r["human_verdict"] in ("suspicious", "fake") for r in ring[1:]),
               f"same-voice signups #2,#3 not verified: {[r['human_verdict'] for r in ring]}")
 
