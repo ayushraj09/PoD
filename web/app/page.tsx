@@ -1,5 +1,6 @@
 import Link from "next/link";
 import TopBar from "./TopBar";
+import { CrowdCanvas } from "@/components/ui/crowd-canvas";
 import { requireUser } from "@/lib/supabase/server";
 
 const OWN_SLUG = process.env.NEXT_PUBLIC_OWN_WAITLIST_SLUG || "proof-of-demand";
@@ -11,22 +12,29 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <>
       <TopBar signedIn={!!user} />
+      <section className="relative isolate h-[calc(100svh-53px)] min-h-[680px] overflow-hidden bg-white">
+        <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-4 pt-16 text-center md:pt-24">
+          <span className="text-xs uppercase tracking-[0.2em] text-gray-400">Proof of Demand</span>
+          <h1 className="mt-4 text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl">Waitlists lie.</h1>
+          <p className="mt-4 text-balance text-xl text-gray-600 md:text-2xl">Know which of these people are real, have the problem, and will pay.</p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href={user ? "/app" : "/login"} className="rounded bg-black px-5 py-3 text-white">Create your waitlist, free</Link>
+            <a href="#try" className="rounded border border-gray-300 bg-white/80 px-5 py-3 backdrop-blur">Try the widget ↓</a>
+          </div>
+        </div>
+        <CrowdCanvas src="/peeps.png" className="absolute inset-x-0 bottom-0 h-[65%] w-full" />
+      </section>
+
       <main className="mx-auto w-full max-w-5xl px-4">
-        <section className="grid items-center gap-10 py-16 md:grid-cols-2">
+        <section id="try" className="grid scroll-mt-4 items-center gap-10 py-16 md:grid-cols-2">
           <div>
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl">Waitlists lie. Know which signups are real.</h1>
-            <p className="mt-4 text-lg text-gray-600">
-              Proof of Demand checks every waitlist signup: is it a real human, do they have a specific problem, and will they pay?
-            </p>
+            <h2 className="text-3xl font-bold leading-tight md:text-4xl">Every signup, checked three ways.</h2>
             <ul className="mt-6 space-y-3">
               <li><b>✓ Real human check.</b> A 20-second voice answer, matched against other signups to catch one person behind many emails.</li>
               <li><b>✓ Specific-pain score.</b> AI scores how concrete their problem is. &ldquo;Lost 3 hours last Tuesday&rdquo; beats &ldquo;sounds cool&rdquo;.</li>
               <li><b>✓ Refundable deposits.</b> Signups can reserve a spot with a small deposit, so you see who will pay.</li>
             </ul>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={user ? "/app" : "/login"} className="rounded bg-black px-5 py-3 text-white">Create your waitlist, free</Link>
-              <Link href="/guide" className="rounded border border-gray-300 px-5 py-3">Add to your site in 2 minutes</Link>
-            </div>
+            <Link href="/guide" className="mt-8 inline-block rounded border border-gray-300 px-5 py-3">Add to your site in 2 minutes</Link>
           </div>
           <div>
             <p className="mb-2 text-sm text-gray-500">Try it: this is our own waitlist, running on our own widget.</p>
@@ -67,7 +75,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </div>
         </section>
       </main>
-      <footer className="border-t border-gray-200 py-6 text-center text-xs text-gray-500">Proof of Demand · Hacker House Goa 2026</footer>
+      <footer className="border-t border-gray-200 py-6 text-center text-xs text-gray-500">
+        Proof of Demand · Hacker House Goa 2026 · Crowd by <a href="https://skiper-ui.com" className="underline">Skiper UI</a>, illustrations by <a href="https://www.openpeeps.com" className="underline">Open Peeps</a>
+      </footer>
     </>
   );
 }
