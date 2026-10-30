@@ -9,7 +9,7 @@ from pathlib import Path, PurePath
 from app import db
 from app.pipeline import audio as audio_step
 from app.pipeline import pain, stt, voice
-from app.pipeline.checks import basic_checks, flag
+from app.pipeline.checks import basic_checks, flag, same_answer_flags
 from app.pipeline.graph import check_ring
 from app.pipeline.notify import send_scored
 from app.pipeline.verdict import decide
@@ -49,6 +49,8 @@ def score(signup: dict, waitlist: dict, flags: list[dict]) -> dict:
                 with step(sid, "stt"):
                     text, lang = stt.transcribe(clean.wav_path)
             out.update(transcript=text, language=lang)
+            with step(sid, "same_answer"):
+                flags += same_answer_flags(signup, text)
 
             with step(sid, "pain"):
                 out.update(pain.score_pain(text, waitlist.get("product_description") or "",

@@ -69,6 +69,15 @@ class FakeDB:
                      if s["waitlist_id"] == waitlist_id and s.get(column) == value
                      and s["id"] != exclude_id and s["created_at"] < before), None)
 
+    def earlier_transcripts(self, waitlist_id, exclude_id, before, limit=500):
+        return [{"id": s["id"], "transcript": s.get("transcript")} for s in self.signups.values()
+                if s["waitlist_id"] == waitlist_id and s["id"] != exclude_id
+                and s["created_at"] < before and s.get("transcript")]
+
+    def signups_on_domains(self, waitlist_id, domains):
+        return [{"id": s["id"], "email": s["email"]} for s in self.signups.values()
+                if s["waitlist_id"] == waitlist_id and s["email"].rsplit("@", 1)[-1] in domains]
+
     def insert_signup(self, row):
         if self.find_signup_by_email(row["waitlist_id"], row["email"]):
             raise db.DuplicateSignup
@@ -99,7 +108,7 @@ def fake_db(monkeypatch):
     fake = FakeDB()
     for name in ("get_waitlist_by_slug", "get_waitlist", "find_signup_by_email",
                  "count_signups_since", "count_recent_by_ip", "earlier_signup_with",
-                 "insert_signup", "get_signup", "update_signup", "signups_with_status",
+                 "insert_signup", "get_signup", "earlier_transcripts", "signups_on_domains", "update_signup", "signups_with_status",
                  "upload_audio", "download_audio", "match_voices"):
         monkeypatch.setattr(db, name, getattr(fake, name))
     return fake

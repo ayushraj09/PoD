@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app import db
 from app.config import get_settings
-from app.pipeline.checks import InvalidEmail, normalize_email
+from app.pipeline.checks import InvalidEmail, alias_of_existing, normalize_email
 from app.pipeline.run import process_signup
 
 log = logging.getLogger("pod.intake")
@@ -93,7 +93,7 @@ async def create_signup(
     if not waitlist:
         return error(404, "waitlist_not_found")
 
-    existing = db.find_signup_by_email(waitlist["id"], email)
+    existing = db.find_signup_by_email(waitlist["id"], email) or alias_of_existing(waitlist["id"], email)
     if existing:
         return error(409, "already_signed_up", signup_id=existing["id"])
 

@@ -66,6 +66,26 @@ def earlier_signup_with(waitlist_id: str, column: str, value: str, exclude_id: s
     return rows[0] if rows else None
 
 
+def earlier_transcripts(waitlist_id: str, exclude_id: str, before: str,
+                        limit: int = 500) -> list[dict]:
+    return (
+        client().table("signups").select("id,transcript")
+        .eq("waitlist_id", waitlist_id).neq("id", exclude_id).lt("created_at", before)
+        .not_.is_("transcript", "null").order("created_at", desc=True).limit(limit)
+        .execute().data
+    )
+
+
+def signups_on_domains(waitlist_id: str, domains: list[str]) -> list[dict]:
+    rows = []
+    for domain in domains:
+        rows += (
+            client().table("signups").select("id,email")
+            .eq("waitlist_id", waitlist_id).ilike("email", f"%@{domain}").execute().data
+        )
+    return rows
+
+
 def insert_signup(row: dict) -> dict:
     try:
         return client().table("signups").insert(row).execute().data[0]

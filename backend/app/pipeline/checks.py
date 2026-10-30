@@ -1,4 +1,6 @@
+import re
 from datetime import datetime, timedelta, timezone
+from difflib import SequenceMatcher
 
 from disposable_email_domains import blocklist
 from email_validator import EmailNotValidError, caching_resolver, validate_email
@@ -7,6 +9,9 @@ from app import db
 
 REPEAT_IP_MIN = 3          # this many signups (including this one) from one network...
 REPEAT_IP_WINDOW = timedelta(hours=24)  # ...within this window
+SAME_ANSWER_MIN_WORDS = 8     # shorter answers ("sounds cool") collide by chance
+SAME_ANSWER_RATIO = 0.9       # word-level similarity that counts as a copied script
+GMAIL = {"gmail.com", "googlemail.com"}
 
 _resolver = None
 
@@ -25,6 +30,40 @@ def normalize_email(email: str, check_dns: bool = True) -> str:
     except EmailNotValidError as e:
         raise InvalidEmail(str(e)) from e
     return info.normalized.lower()
+
+
+def canonical_email(email: str) -> str:
+    """The inbox an address really reaches: drops +tags everywhere and dots for Gmail."""
+    local, _, domain = email.lower().partition("@")
+    local = local.split("+", 1)[0]
+    if domain in GMAIL:
+        local, domain = local.replace(".", ""), "gmail.com"
+    return f"{local}@{domain}"
+
+
+def alias_of_existing(waitlist_id: str, email: str) -> dict | None:
+    """An earlier signup on this waitlist that reaches the same inbox under another spelling."""
+    domain = email.rsplit("@", 1)[-1]
+    domains = sorted(GMAIL) if domain in GMAIL else [domain]
+    target = canonical_email(email)
+    return next((r for r in db.signups_on_domains(waitlist_id, domains)
+                 if r["email"] != email and canonical_email(r["email"]) == target), None)
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def same_answer_flags(signup: dict, transcript: str) -> list[dict]:
+    """Real people describe their problem in their own words; a near-identical transcript to an
+    earlier signup on the same waitlist means a shared script (click farm, coordinated signups)."""
+    words = _words(transcript)
+    if len(words) < SAME_ANSWER_MIN_WORDS:
+        return []
+    for other in db.earlier_transcripts(signup["waitlist_id"], signup["id"], signup["created_at"]):
+        if SequenceMatcher(None, words, _words(other["transcript"] or "")).ratio() >= SAME_ANSWER_RATIO:
+            return [flag("same_answer", other["id"])]
+    return []
 
 
 def is_disposable(email: str) -> bool:

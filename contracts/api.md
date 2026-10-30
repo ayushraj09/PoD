@@ -16,7 +16,8 @@ Responses:
 - `201 {"signup_id": "...", "status": "pending"}`, with scoring running in the background (usually under 15 s)
 - `400 {"error": "invalid_email" | "no_consent" | "bad_audio"}`
 - `404 {"error": "waitlist_not_found"}`
-- `409 {"error": "already_signed_up", "signup_id": "..."}`
+- `409 {"error": "already_signed_up", "signup_id": "..."}`, also when the email is an alias of an
+  earlier signup's inbox (`+tags`, and dots for Gmail/Googlemail)
 - `429 {"error": "rate_limited"}` (more than 10 signups per IP per hour per waitlist)
 
 ## `GET /v1/signups/{id}/status`

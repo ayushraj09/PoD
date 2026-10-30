@@ -6,6 +6,8 @@ PENALTIES = {
     "ring_member": 40,
     "repeat_device": 20,  # weak: open-source FingerprintJS is only 40-60% accurate
     "repeat_ip": 15,
+    "same_answer": 35,    # word-for-word the same answer as another signup (shared script)
+    "possible_ai_voice": 30,  # digital silence: synthesized or injected audio
     "bad_recording": 40,  # too_short and/or no_speech, counted once
 }
 BAD_RECORDING = {"too_short", "no_speech"}
