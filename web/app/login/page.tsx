@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import TopBar from "../TopBar";
 
 export default function Login() {
@@ -11,14 +10,16 @@ export default function Login() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     setState("sending");
-    const { error } = await supabaseBrowser().auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => null);
+    if (res?.ok) setState("sent");
+    else {
+      setError((await res?.json().catch(() => null))?.error ?? "Couldn't send the link. Try again.");
       setState("error");
-    } else setState("sent");
+    }
   }
 
   return (
