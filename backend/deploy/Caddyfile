@@ -1,0 +1,10 @@
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy backend:8000 {
+		# The app reads True-Client-IP / CF-Connecting-IP first (set by Render's proxy).
+		# Here nothing sets them, so strip any a visitor sends; the app then uses the
+		# X-Forwarded-For that Caddy writes from the real connection.
+		header_up -True-Client-IP
+		header_up -CF-Connecting-IP
+	}
+}

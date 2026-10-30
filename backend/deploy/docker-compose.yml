@@ -1,0 +1,39 @@
+# Backend + Caddy (automatic HTTPS) for a VPS. Guide: backend/docs/deploy_hostinger.md
+# Run from this folder:  docker compose up -d --build
+# Needs: ../.env (backend settings) and ./.env with API_DOMAIN=api.yourdomain.com
+services:
+  backend:
+    build: ..
+    image: pod-backend
+    restart: unless-stopped
+    environment:
+      PORT: "8000"
+    volumes:
+      - ../.env:/app/.env:ro          # pydantic reads it (handles inline comments)
+    expose:
+      - "8000"                        # only Caddy can reach it; never published directly
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data              # certificates; keep this volume
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:
