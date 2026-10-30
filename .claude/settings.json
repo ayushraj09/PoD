@@ -1,11 +1,5 @@
 {
   "permissions": {
-    "deny": [
-      "Read(./**/.env)",
-      "Bash(git push --force *)",
-      "Bash(git push -f *)",
-      "Bash(git reset --hard *)"
-    ],
     "allow": [
       "Bash(git status)",
       "Bash(git diff *)",
@@ -15,6 +9,15 @@
       "Bash(git pull --rebase *)",
       "Bash(pytest *)",
       "Bash(npm run *)"
+    ],
+    "deny": [
+      "Read(./**/.env)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard *)"
     ]
+  },
+  "enabledPlugins": {
+    "brag@brag": true
   }
 }
