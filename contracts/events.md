@@ -2,7 +2,7 @@
 
 ## `signup.scored`
 
-When a signup reaches `scored`, the backend sends `POST NOTIFY_WEBHOOK_URL` (a viaSocket webhook set up by B), only if the variable is set. 5 s timeout; failures are logged and never block scoring.
+When a signup reaches `scored`, the backend sends `POST NOTIFY_WEBHOOK_URL` (any webhook receiver, e.g. a Slack or automation tool), only if the variable is set. 5 s timeout; failures are logged and never block scoring.
 
 ```json
 {

@@ -111,7 +111,6 @@ Think of it as TrustMRR for founders who don't have revenue yet.
 | **AI Grants India** ($10,000 credits) | Pays for speech-to-text and the AI that scores answers. Apply at aigrants.in early. | **Core** |
 | **Dodo Payments** ($15,000 credits) | Takes the optional refundable deposit and later the founder subscription. Also one of the payment providers TrustMRR verifies. Check refund support in the docs. | **Core** |
 | **TigerGraph Savanna** ($500 prize) | Graph of signups linked by shared devices, networks, voices and answers, to catch fake rings. | Strong add (TigerGraph track) |
-| **viaSocket** ($50,000 credits) | Sends alerts and summaries to the founder's Slack, email or Google Sheets without building each connection. | Nice to have (viaSocket track) |
 | **Wispr Flow** | Not in the product. Use it to dictate the pitch script and docs faster. | Team use only |
 
 ### Build stack
@@ -134,7 +133,7 @@ Think of it as TrustMRR for founders who don't have revenue yet.
 
 1. **Must have by Day 3 launch:** widget, speech to text, pain score, Dodo deposit, founder dashboard.
 2. **Add on Day 3:** voice-fingerprint duplicate check, throwaway email check.
-3. **If time allows:** TigerGraph fake-ring graph, viaSocket alerts.
+3. **If time allows:** TigerGraph fake-ring graph.
 
 The first set alone is a working, sellable product.
 

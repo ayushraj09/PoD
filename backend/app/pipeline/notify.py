@@ -1,4 +1,4 @@
-"""Sends signup.scored to NOTIFY_WEBHOOK_URL (viaSocket), per contracts/events.md."""
+"""Sends signup.scored to NOTIFY_WEBHOOK_URL (any webhook receiver), per contracts/events.md."""
 
 import logging
 

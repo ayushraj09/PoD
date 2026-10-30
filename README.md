@@ -56,8 +56,8 @@ Founder's site ──embed.js──▶ widget iframe (Next.js on Vercel)
                    │ background scoring:                          Postgres · pgvector · Storage
                    │ ffmpeg → speech-to-text → pain LLM →         │
                    │ voice match → fraud checks → verdict         ▼ Realtime
-                   ├──▶ TigerGraph Savanna (fake-ring detection)  Founder dashboard,
-                   └──▶ viaSocket webhook (founder alerts)        public report, badge
+                   └──▶ TigerGraph Savanna (fake-ring detection)  Founder dashboard,
+                                                                  public report, badge
 
 Dodo Payments ──signed webhook──▶ Next.js API ──▶ deposit marked paid
 ```
@@ -74,9 +74,8 @@ Dodo Payments ──signed webhook──▶ Next.js API ──▶ deposit marked
 | Database, auth, storage, live updates | Supabase (Postgres, pgvector, Storage, Realtime, magic-link login) |
 | Fake-ring detection | TigerGraph Savanna, GSQL |
 | Deposits and Pro plan | Dodo Payments |
-| Founder alerts | viaSocket |
 
-**Hackathon partners used:** AI Grants India (OpenAI and Smallest.ai credits), Dodo Payments, TigerGraph, viaSocket.
+**Hackathon partners used:** AI Grants India (OpenAI and Smallest.ai credits), Dodo Payments, TigerGraph.
 
 ## Evidence
 
@@ -121,7 +120,7 @@ TigerGraph setup: `python -m scripts.tg_setup`. Backend deployment: [`backend/do
 | Folder | Contents |
 |---|---|
 | [`backend/`](backend) | FastAPI service: signup intake, speech-to-text, pain scoring, voice fingerprint, fraud checks, TigerGraph |
-| [`web/`](web) | Next.js app: founder dashboard, signup widget, public report and badge, payments, alerts |
+| [`web/`](web) | Next.js app: founder dashboard, signup widget, public report and badge, payments |
 | [`contracts/`](contracts) | Shared definitions: database migrations, API, scoring rules, events, environment variable names |
 | [`docs/`](docs) | Product idea, build plans, verified tool notes |
 
