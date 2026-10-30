@@ -63,7 +63,7 @@ def write_signup(conn, signup: dict) -> None:
 
 
 def find_ring(conn, signup_id: str) -> list[str]:
-    res = conn.runInstalledQuery("ring_of", {"seed": signup_id})
+    res = conn.runInstalledQuery("ring_of", {"seed": (signup_id,)})  # 1-tuple = vertex param
     out = {k: v for part in res for k, v in part.items()}
     members, voice_links = out.get("members", []), out.get("voice_links", 0)
     return sorted(members) if len(members) >= RING_MIN and voice_links > 0 else []

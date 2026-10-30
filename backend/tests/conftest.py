@@ -3,7 +3,12 @@ from datetime import datetime, timezone
 
 os.environ.setdefault("LOAD_MODELS", "false")
 os.environ.setdefault("CHECK_EMAIL_DNS", "false")
-os.environ.setdefault("WEB_ORIGIN", "http://localhost:3000")
+os.environ["WEB_ORIGIN"] = "http://localhost:3000"
+# Tests must never reach real services, even when backend/.env is filled in
+# (environment variables win over .env).
+for name in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "TG_HOST", "TG_SECRET",
+             "NOTIFY_WEBHOOK_URL", "OPENAI_API_KEY", "SMALLEST_API_KEY", "SARVAM_API_KEY"):
+    os.environ[name] = ""
 try:  # optional static ffmpeg for laptops whose system ffmpeg is broken
     import imageio_ffmpeg
     os.environ.setdefault("FFMPEG_BIN", imageio_ffmpeg.get_ffmpeg_exe())

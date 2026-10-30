@@ -7,12 +7,12 @@ CREATE QUERY ring_of(VERTEX<Signup> seed, INT max_hops = 6) FOR GRAPH GRAPH_NAME
   SetAccum<STRING> @@members;
   SumAccum<INT> @@voice_links;
 
-  frontier = {seed};
-  frontier = SELECT s FROM (s:frontier)
+  frontier (Signup|Device) = {seed};
+  frontier = SELECT s FROM frontier:s
              POST-ACCUM s.@visited += TRUE, @@members += s.id;
 
   WHILE frontier.size() > 0 LIMIT max_hops DO
-    frontier = SELECT t FROM (s:frontier) -[e:USED_DEVICE|SOUNDS_LIKE]- (t)
+    frontier = SELECT t FROM frontier:s -((USED_DEVICE|SOUNDS_LIKE):e)- (Signup|Device):t
                WHERE t.@visited == FALSE
                ACCUM CASE WHEN e.type == "SOUNDS_LIKE" THEN @@voice_links += 1 END
                POST-ACCUM t.@visited += TRUE,
