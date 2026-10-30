@@ -12,8 +12,9 @@ SAMPLE_RATE = 16000
 MAX_SECONDS = 30            # Sarvam's REST endpoint rejects longer audio
 MIN_SECONDS = 3.0           # under this -> too_short
 FRAME_MS = 30
-SPEECH_DBFS = -40.0         # a frame louder than this counts as sound
-MIN_SPEECH_SECONDS = 0.8    # less loud audio than this -> no_speech
+SILENCE_DBFS = -65.0        # frames quieter than this are silence, whatever the mic
+ABOVE_NOISE_DB = 12.0       # speech frames stand this far above the clip's own background
+MIN_SPEECH_SECONDS = 0.8    # less speech than this -> no_speech
 
 
 class BadAudio(Exception):
@@ -49,7 +50,11 @@ def speech_seconds(samples: np.ndarray, sr: int = SAMPLE_RATE) -> float:
     frames = samples[: n * frame].reshape(n, frame)
     rms = np.sqrt(np.mean(frames.astype(np.float64) ** 2, axis=1))
     dbfs = 20 * np.log10(np.maximum(rms, 1e-10))
-    return float(np.sum(dbfs > SPEECH_DBFS)) * FRAME_MS / 1000
+    # Mic levels vary by 40 dB between devices, so compare against this clip's quietest
+    # frames (background) instead of a fixed level. Steady noise never rises above itself.
+    background = np.percentile(dbfs, 10)
+    threshold = max(SILENCE_DBFS, background + ABOVE_NOISE_DB)
+    return float(np.sum(dbfs > threshold)) * FRAME_MS / 1000
 
 
 def clean(src: Path, workdir: Path) -> CleanAudio:

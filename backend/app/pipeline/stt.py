@@ -40,7 +40,9 @@ def _smallest(wav_path: Path) -> tuple[str, str | None]:
             continue
         r.raise_for_status()
         body = r.json()
-        return (body.get("transcription") or "").strip(), body.get("language") or language
+        # an aggregator like multi-indic is a request setting, not a detected language
+        detected = body.get("language") or (None if language.startswith("multi") else language)
+        return (body.get("transcription") or "").strip(), detected
     raise STTError("smallest: no language accepted")
 
 

@@ -8,7 +8,7 @@ from app.pipeline import pain, run, stt, voice
 
 def recording(tmp_path, seconds=5, source="tone"):
     path = tmp_path / "rec.webm"
-    src = {"tone": f"sine=frequency=220:duration={seconds}",
+    src = {"tone": f"sine=frequency=220:duration={seconds},tremolo=f=3:d=0.95",
            "silence": f"anullsrc=r=48000:cl=mono:d={seconds}"}[source]
     subprocess.run([get_settings().ffmpeg_bin, "-y", "-loglevel", "error", "-f", "lavfi",
                     "-i", src, str(path)], check=True)

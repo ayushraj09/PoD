@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -7,10 +8,17 @@ from app.pipeline import stt
 from app.pipeline.audio import BadAudio, clean
 
 
+SAMPLES = Path(__file__).parent / "samples"
+
+
 def make(tmp_path, name, source, seconds):
-    """Generate a test recording with ffmpeg (sine = 'speech', anullsrc = silence)."""
+    """Generate a test recording with ffmpeg. 'tone' rises and falls like syllables;
+    'quiet' is the same 30 dB down (a weak mic, like the quietest real sample); 'noise' is steady fan-like hiss."""
     path = tmp_path / name
-    src = {"tone": f"sine=frequency=220:duration={seconds}",
+    syllables = f"sine=frequency=220:duration={seconds},tremolo=f=3:d=0.95"
+    src = {"tone": syllables,
+           "quiet": f"{syllables},volume=-30dB",
+           "noise": f"anoisesrc=color=pink:amplitude=0.05:duration={seconds}",
            "silence": f"anullsrc=r=48000:cl=stereo:d={seconds}"}[source]
     subprocess.run([get_settings().ffmpeg_bin, "-y", "-loglevel", "error", "-f", "lavfi", "-i", src, str(path)],
                    check=True)
@@ -32,6 +40,24 @@ def test_too_short(tmp_path):
 def test_silence_is_no_speech(tmp_path):
     audio = clean(make(tmp_path, "a.webm", "silence", 5), tmp_path)
     assert [f["code"] for f in audio.flags] == ["no_speech"]
+
+
+def test_quiet_mic_still_counts_as_speech(tmp_path):
+    assert clean(make(tmp_path, "a.webm", "quiet", 5), tmp_path).flags == []
+
+
+def test_steady_noise_is_no_speech(tmp_path):
+    audio = clean(make(tmp_path, "a.webm", "noise", 5), tmp_path)
+    assert [f["code"] for f in audio.flags] == ["no_speech"]
+
+
+@pytest.mark.skipif(not SAMPLES.exists(), reason="tests/samples not downloaded")
+def test_real_recordings_have_speech(tmp_path):
+    files = [f for f in SAMPLES.iterdir() if f.suffix in {".wav", ".webm", ".m4a"}]
+    assert files
+    for f in files:
+        audio = clean(f, tmp_path)
+        assert audio.flags == [], f"{f.name}: {audio.flags} ({audio.speech_seconds:.1f}s speech)"
 
 
 def test_capped_at_30s(tmp_path):
