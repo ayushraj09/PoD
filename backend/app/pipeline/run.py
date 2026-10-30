@@ -15,6 +15,7 @@ from app.pipeline.notify import send_scored
 from app.pipeline.verdict import decide
 
 log = logging.getLogger("pod.pipeline")
+INTERRUPTED = "interrupted"
 
 
 @contextmanager
@@ -53,7 +54,7 @@ def score(signup: dict, waitlist: dict, flags: list[dict]) -> dict:
                 out.update(pain.score_pain(text, waitlist.get("product_description") or "",
                                            waitlist.get("question") or ""))
 
-            if has_speech:
+            if has_speech and voice.available():  # model off (LOAD_MODELS=false): no matching
                 with step(sid, "voice"):
                     embedding = voice.embed(clean.wav_path)
                     out["voice_embedding"] = embedding
@@ -108,4 +109,14 @@ def requeue_stuck() -> None:
     if stuck:
         log.info("re-queueing %d stuck signups", len(stuck))
     for row in stuck:
+        if row["status"] == "processing":
+            # The process died while scoring this row; maybe because of it (e.g. out of memory).
+            # Retry once, leaving a marker that a successful run overwrites. If the marker is
+            # still there, it already crashed once: finish it instead of crash-looping.
+            if any(f.get("detail") == INTERRUPTED for f in row.get("flags") or []):
+                log.warning("signup %s crashed twice, marking it unverified", row["id"])
+                db.update_signup(row["id"], {"status": "scored", "human_verdict": "unverified",
+                                             "trust_score": None})
+                continue
+            db.update_signup(row["id"], {"flags": [flag("processing_error", INTERRUPTED)]})
         process_signup(row["id"])

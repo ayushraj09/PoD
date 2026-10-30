@@ -85,7 +85,8 @@ def update_signup(signup_id: str, fields: dict[str, Any]) -> None:
 
 
 def signups_with_status(statuses: list[str]) -> list[dict]:
-    return client().table("signups").select("id").in_("status", statuses).execute().data
+    return client().table("signups").select("id,status,flags").in_("status", statuses) \
+        .execute().data
 
 
 def upload_audio(path: str, data: bytes, content_type: str) -> None:

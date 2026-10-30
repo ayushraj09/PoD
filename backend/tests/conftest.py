@@ -81,7 +81,8 @@ class FakeDB:
         self.signups[signup_id].update(fields)
 
     def signups_with_status(self, statuses):
-        return [{"id": s["id"]} for s in self.signups.values() if s["status"] in statuses]
+        return [{"id": s["id"], "status": s["status"], "flags": s["flags"]}
+                for s in self.signups.values() if s["status"] in statuses]
 
     def upload_audio(self, path, data, content_type):
         self.files[path] = (data, content_type)

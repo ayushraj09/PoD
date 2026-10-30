@@ -9,6 +9,10 @@ from app import db, models
 from app.config import get_settings
 from app.pipeline.checks import flag
 
+# Memory for the speaker model grows with clip length (~15 MB per second); 10 s is plenty to
+# recognise a voice and keeps one embedding well under 200 MB.
+MAX_EMBED_SECONDS = 10
+
 
 def embed(wav_path: Path) -> list[float]:
     """16 kHz mono WAV -> unit-length 192-number voice fingerprint."""
@@ -17,10 +21,15 @@ def embed(wav_path: Path) -> list[float]:
     samples, sr = sf.read(wav_path, dtype="float32")
     if sr != 16000:
         raise ValueError(f"expected 16 kHz audio, got {sr}")
-    with torch.no_grad():
+    samples = samples[: MAX_EMBED_SECONDS * sr]
+    with torch.inference_mode():
         emb = models.encoder.encode_batch(torch.from_numpy(samples)[None, :])
     vec = emb.squeeze().cpu().numpy().astype(np.float64)
     return (vec / np.linalg.norm(vec)).tolist()
+
+
+def available() -> bool:
+    return models.encoder is not None
 
 
 def similarity(a: list[float], b: list[float]) -> float:

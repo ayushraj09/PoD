@@ -23,6 +23,7 @@ def stubs(monkeypatch):
         "pain_score": 82, "pain_reason": "Specific moment and cost.",
         "pain_quote": "I lost three hours last Tuesday"})
     monkeypatch.setattr(voice, "embed", lambda wav: [1.0] + [0.0] * 191)
+    monkeypatch.setattr(voice, "available", lambda: True)
     monkeypatch.setattr(run, "send_scored", lambda s, slug: calls["notify"].append((s, slug)))
     return calls
 
@@ -92,3 +93,30 @@ def test_requeue_finishes_stuck_rows(fake_db, stubs):
     b = fake_db.add_signup(waitlist_id=wl["id"], status="pending")
     run.requeue_stuck()
     assert fake_db.signups[a["id"]]["status"] == fake_db.signups[b["id"]]["status"] == "scored"
+
+
+def test_crashed_twice_is_finished_not_retried(fake_db, stubs, monkeypatch):
+    wl = fake_db.add_waitlist("acme")
+    s = fake_db.add_signup(waitlist_id=wl["id"], status="processing",
+                           flags=[{"code": "processing_error", "detail": run.INTERRUPTED}])
+    monkeypatch.setattr(run, "process_signup", lambda sid: pytest.fail("must not retry"))
+    run.requeue_stuck()
+    row = fake_db.signups[s["id"]]
+    assert row["status"] == "scored" and row["human_verdict"] == "unverified"
+
+
+def test_interrupted_once_is_retried_and_marker_cleared(fake_db, stubs):
+    wl = fake_db.add_waitlist("acme")
+    s = fake_db.add_signup(waitlist_id=wl["id"], status="processing")
+    run.requeue_stuck()
+    row = fake_db.signups[s["id"]]
+    assert row["status"] == "scored" and row["flags"] == []
+
+
+def test_voice_step_skipped_without_model(fake_db, stubs, tmp_path, monkeypatch):
+    monkeypatch.setattr(voice, "available", lambda: False)
+    monkeypatch.setattr(voice, "embed", lambda wav: pytest.fail("embed called"))
+    s = signup_with_audio(fake_db, recording(tmp_path))
+    run.process_signup(s["id"])
+    row = fake_db.signups[s["id"]]
+    assert row["human_verdict"] == "verified" and "voice_embedding" not in row
