@@ -55,11 +55,13 @@ def count_recent_by_ip(waitlist_id: str, ip_hash: str, hours: int = 1) -> int:
     return count_signups_since(waitlist_id, "ip_hash", ip_hash, since)
 
 
-def other_signup_with(waitlist_id: str, column: str, value: str, exclude_id: str) -> dict | None:
+def earlier_signup_with(waitlist_id: str, column: str, value: str, exclude_id: str,
+                        before: str) -> dict | None:
+    """The first signup on this waitlist with the same value, made before `before`."""
     rows = (
         client().table("signups").select("id")
         .eq("waitlist_id", waitlist_id).eq(column, value).neq("id", exclude_id)
-        .order("created_at").limit(1).execute().data
+        .lt("created_at", before).order("created_at").limit(1).execute().data
     )
     return rows[0] if rows else None
 

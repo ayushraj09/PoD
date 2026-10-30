@@ -1,12 +1,15 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    supabase_url: str = ""
+    # the web app calls it NEXT_PUBLIC_SUPABASE_URL; accept either name
+    supabase_url: str = Field("", validation_alias=AliasChoices("SUPABASE_URL",
+                                                                "NEXT_PUBLIC_SUPABASE_URL"))
     supabase_service_role_key: str = ""
     web_origin: str = "http://localhost:3000"  # comma-separated list allowed
     ip_hash_salt: str = "dev-salt"

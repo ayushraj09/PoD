@@ -6,7 +6,7 @@ os.environ.setdefault("CHECK_EMAIL_DNS", "false")
 os.environ["WEB_ORIGIN"] = "http://localhost:3000"
 # Tests must never reach real services, even when backend/.env is filled in
 # (environment variables win over .env).
-for name in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "TG_HOST", "TG_SECRET",
+for name in ("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "TG_HOST", "TG_SECRET",
              "NOTIFY_WEBHOOK_URL", "OPENAI_API_KEY", "SMALLEST_API_KEY", "SARVAM_API_KEY"):
     os.environ[name] = ""
 try:  # optional static ffmpeg for laptops whose system ffmpeg is broken
@@ -64,10 +64,10 @@ class FakeDB:
         return sum(1 for s in self.signups.values()
                    if s["waitlist_id"] == waitlist_id and s["ip_hash"] == ip_hash)
 
-    def other_signup_with(self, waitlist_id, column, value, exclude_id):
+    def earlier_signup_with(self, waitlist_id, column, value, exclude_id, before):
         return next((s for s in self.signups.values()
                      if s["waitlist_id"] == waitlist_id and s.get(column) == value
-                     and s["id"] != exclude_id), None)
+                     and s["id"] != exclude_id and s["created_at"] < before), None)
 
     def insert_signup(self, row):
         if self.find_signup_by_email(row["waitlist_id"], row["email"]):
@@ -97,7 +97,7 @@ class FakeDB:
 def fake_db(monkeypatch):
     fake = FakeDB()
     for name in ("get_waitlist_by_slug", "get_waitlist", "find_signup_by_email",
-                 "count_signups_since", "count_recent_by_ip", "other_signup_with",
+                 "count_signups_since", "count_recent_by_ip", "earlier_signup_with",
                  "insert_signup", "get_signup", "update_signup", "signups_with_status",
                  "upload_audio", "download_audio", "match_voices"):
         monkeypatch.setattr(db, name, getattr(fake, name))

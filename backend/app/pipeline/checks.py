@@ -43,8 +43,9 @@ def basic_checks(signup: dict) -> list[dict]:
         flags.append(flag("disposable_email", signup["email"].rsplit("@", 1)[-1]))
 
     if signup.get("device_id"):
-        other = db.other_signup_with(signup["waitlist_id"], "device_id", signup["device_id"],
-                                     signup["id"])
+        # only earlier signups: re-scoring the first one must not blame it for a later one
+        other = db.earlier_signup_with(signup["waitlist_id"], "device_id", signup["device_id"],
+                                       signup["id"], signup["created_at"])
         if other:
             flags.append(flag("repeat_device", other["id"]))
 

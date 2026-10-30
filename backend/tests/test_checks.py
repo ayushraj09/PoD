@@ -37,3 +37,9 @@ def test_repeat_ip_needs_three(fake_db):
     assert basic_checks(second) == []
     third = fake_db.add_signup(waitlist_id="wl", ip_hash="ip1")
     assert codes(basic_checks(third)) == ["repeat_ip"]
+
+
+def test_repeat_device_only_blames_later_signup(fake_db):
+    first = fake_db.add_signup(waitlist_id="wl", device_id="d1")
+    fake_db.add_signup(waitlist_id="wl", device_id="d1")
+    assert basic_checks(first) == []  # re-scoring the first one must stay clean
