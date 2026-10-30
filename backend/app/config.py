@@ -41,7 +41,9 @@ class Settings(BaseSettings):
 
     @property
     def web_origins(self) -> list[str]:
-        return [o.strip().rstrip("/") for o in self.web_origin.split(",") if o.strip()]
+        # tolerate values pasted into a dashboard with quotes, spaces or a trailing slash
+        cleaned = (o.strip().strip("'\"").strip().rstrip("/") for o in self.web_origin.split(","))
+        return [o for o in cleaned if o]
 
 
 @lru_cache

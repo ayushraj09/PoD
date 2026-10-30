@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging.getLogger("pod").info("CORS allowed origins: %s", get_settings().web_origins)
     models.load()
     if get_settings().supabase_url:
         threading.Thread(target=requeue_stuck, daemon=True).start()
