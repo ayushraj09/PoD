@@ -3,6 +3,9 @@ import { SITE } from "@/lib/site";
 
 // Magic link via EmailJS instead of Supabase's mailer (2 emails/hour).
 // Supabase makes the token without sending anything; we email the link ourselves.
+// Values pasted into Vercel often carry stray spaces, newlines or quotes.
+const env = (k: string) => process.env[k]?.trim().replace(/^["']|["']$/g, "");
+
 export async function POST(req: Request) {
   const { email } = await req.json().catch(() => ({}));
   if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -22,10 +25,10 @@ export async function POST(req: Request) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      service_id: process.env.EMAILJS_SERVICE_ID,
-      template_id: process.env.EMAILJS_TEMPLATE_ID,
-      user_id: process.env.EMAILJS_PUBLIC_KEY,
-      accessToken: process.env.EMAILJS_PRIVATE_KEY,
+      service_id: env("EMAILJS_SERVICE_ID"),
+      template_id: env("EMAILJS_TEMPLATE_ID"),
+      user_id: env("EMAILJS_PUBLIC_KEY"),
+      accessToken: env("EMAILJS_PRIVATE_KEY"),
       template_params: { to_email: email, link },
     }),
   });
