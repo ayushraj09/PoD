@@ -7,6 +7,7 @@ export const FLAG_TEXT: Record<string, string> = {
   possible_ai_voice: "Voice may be AI-generated",
   no_speech: "Recording has no clear speech",
   too_short: "Answer under 3 seconds",
+  same_answer: "Answer is word-for-word the same as another signup",
   ring_member: "Part of a connected group of suspicious signups",
   processing_error: "Scoring failed; will show as unverified",
 };
