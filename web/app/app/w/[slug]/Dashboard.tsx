@@ -12,25 +12,36 @@ export default function Dashboard({ waitlistId, initial }: { waitlistId: string;
 
   useEffect(() => {
     const supabase = supabaseBrowser();
-    const channel = supabase
-      .channel(`signups-${waitlistId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "signups", filter: `waitlist_id=eq.${waitlistId}` },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            setRows((r) => r.filter((x) => x.id !== (payload.old as Signup).id));
-            return;
-          }
-          const row = payload.new as Signup;
-          setRows((r) => {
-            const rest = r.filter((x) => x.id !== row.id);
-            return [row, ...rest].sort((a, b) => b.created_at.localeCompare(a.created_at));
-          });
-        },
-      )
-      .subscribe((status) => setLive(status === "SUBSCRIBED"));
-    return () => { supabase.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    (async () => {
+      // Realtime checks RLS with the socket's token: without this it connects as anonymous,
+      // shows "live", and every event is silently filtered out.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) supabase.realtime.setAuth(session.access_token);
+      if (cancelled) return;
+      channel = supabase
+        .channel(`signups-${waitlistId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "signups", filter: `waitlist_id=eq.${waitlistId}` },
+          (payload) => {
+            if (payload.eventType === "DELETE") {
+              setRows((r) => r.filter((x) => x.id !== (payload.old as Signup).id));
+              return;
+            }
+            const row = payload.new as Signup;
+            setRows((r) => {
+              const rest = r.filter((x) => x.id !== row.id);
+              return [row, ...rest].sort((a, b) => b.created_at.localeCompare(a.created_at));
+            });
+          },
+        )
+        .subscribe((status) => setLive(status === "SUBSCRIBED"));
+    })();
+
+    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
   }, [waitlistId]);
 
   const f = funnel(rows);
