@@ -38,9 +38,18 @@ def main() -> None:
     conn = _connect()
     print(f"connected to {s.tg_host}, graph {s.tg_graph}")
 
-    listing = run(conn, "ls", f"USE GRAPH {s.tg_graph}\nls")
+    overview = run(conn, "graphs in this workspace", "ls")
+    graph_exists = f"Graph {s.tg_graph}(" in overview
     if args.check:
+        if graph_exists:
+            run(conn, f"graph {s.tg_graph}", f"USE GRAPH {s.tg_graph}\nls")
+        else:
+            print(f"--- graph {s.tg_graph} does not exist yet; setup will create it")
         return
+
+    if not graph_exists:
+        run(conn, f"create graph {s.tg_graph}", f"CREATE GRAPH {s.tg_graph}()")
+    listing = run(conn, "ls", f"USE GRAPH {s.tg_graph}\nls")
 
     if not args.query:
         if "Signup" in listing:
