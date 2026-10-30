@@ -29,7 +29,16 @@ export async function POST(req: Request) {
       template_id: env("EMAILJS_TEMPLATE_ID"),
       user_id: env("EMAILJS_PUBLIC_KEY"),
       accessToken: env("EMAILJS_PRIVATE_KEY"),
-      template_params: { to_email: email, link },
+      // Names must match the {{...}} placeholders in the EmailJS template.
+      template_params: {
+        to_email: email,
+        magic_link: link,
+        website_url: SITE,
+        // ponytail: 15 min is what the template promises; Supabase's email OTP expiry must match.
+        time: new Date(Date.now() + 15 * 60_000).toLocaleTimeString("en-IN", {
+          timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit",
+        }) + " IST",
+      },
     }),
   });
   if (!res.ok) {
