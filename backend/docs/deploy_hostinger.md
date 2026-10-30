@@ -77,6 +77,29 @@ In Vercel → Settings → Environment Variables set
 `NEXT_PUBLIC_BACKEND_URL=https://187-127-153-250.sslip.io`, then **redeploy** (it's baked in at build).
 Suspend the old Render service so nothing talks to two backends.
 
+## Variant: the server already runs nginx on 80/443 (our Hostinger box)
+
+Ports 80/443 belong to an existing nginx serving another live site, so skip Caddy:
+
+1. As root (only touches our new site; `nginx -t` gates every reload):
+   ```bash
+   usermod -aG docker user
+   cp /home/user/PoD/backend/deploy/nginx-pod-api.conf /etc/nginx/sites-available/pod-api
+   ln -sf /etc/nginx/sites-available/pod-api /etc/nginx/sites-enabled/pod-api
+   nginx -t && systemctl reload nginx
+   certbot --nginx -d 187-127-153-250.sslip.io --non-interactive --agree-tos --register-unsafely-without-email --redirect
+   sed -i '/listen \[::\]:443 ssl;/d' /etc/nginx/sites-available/pod-api   # see note below
+   nginx -t && systemctl reload nginx
+   ```
+2. As `user`: `printf "COMPOSE_FILE=docker-compose.nginx.yml\nAPI_DOMAIN=187-127-153-250.sslip.io\n" > ~/PoD/backend/deploy/.env`,
+   then `~/PoD/backend/deploy/update.sh` (builds and starts the backend on `127.0.0.1:8000`, memory capped at 1.5 GB).
+
+**Note: IPv6 443 is taken by a VPN server (SoftEther) on this box.** certbot adds
+`listen [::]:443 ssl;`; nginx can't bind it, and a *reload* then fails silently and keeps the old
+config (`nginx -t` still says OK). Symptom: HTTPS shows the other site's certificate and HTTP doesn't
+redirect. Deleting that line (step 1) fixes it; check the worker start time with
+`ps -eo lstart,args | grep "nginx: worker"` to confirm a reload took effect.
+
 ## Updating after a push
 
 ```bash
