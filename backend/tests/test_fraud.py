@@ -87,3 +87,48 @@ def test_pure_silence_is_no_speech_not_ai(tmp_path):
 ])
 def test_new_penalties(codes, trust, verdict):
     assert decide([{"code": c} for c in codes], has_audio=True) == (trust, verdict)
+
+
+STORY = ("Last month I had a big pimple breakout two days before my sister's wedding and I spent "
+         "three thousand rupees at a dermatologist and still had to hide it with makeup")
+PARAPHRASE = ("Last month I got a huge breakout just before my sister's wedding, paid around three "
+              "thousand rupees to a skin doctor and still needed makeup to hide it")
+OTHER = ("My forehead gets oily by noon every day and I break out before every exam, I have tried "
+         "four face washes this year and none of them lasted more than a week")
+
+
+@pytest.fixture
+def fake_meaning(monkeypatch):
+    from app.pipeline import checks, textsim
+    import numpy as np
+    monkeypatch.setattr(checks.get_settings(), "openai_api_key", "test")
+    def embed(items):
+        out = {}
+        for k, t in items.items():
+            v = np.array([1.0, 0.25, 0.0]) if "wedding" in t else np.array([0.0, 0.3, 1.0])
+            out[k] = v / np.linalg.norm(v)
+        return out
+    monkeypatch.setattr(textsim, "embed", embed)
+
+
+def test_paraphrased_script_is_flagged_by_meaning(fake_db, fake_meaning):
+    first = fake_db.add_signup(waitlist_id="wl", transcript=STORY)
+    s = fake_db.add_signup(waitlist_id="wl")
+    assert same_answer_flags(s, PARAPHRASE) == [{"code": "same_answer", "detail": first["id"]}]
+
+
+def test_different_story_same_topic_is_not_flagged(fake_db, fake_meaning):
+    fake_db.add_signup(waitlist_id="wl", transcript=STORY)
+    s = fake_db.add_signup(waitlist_id="wl")
+    assert same_answer_flags(s, OTHER) == []
+
+
+def test_meaning_check_failure_falls_back_to_words(fake_db, monkeypatch):
+    from app.pipeline import checks, textsim
+    monkeypatch.setattr(checks.get_settings(), "openai_api_key", "test")
+    def down(items):
+        raise RuntimeError("openai down")
+    monkeypatch.setattr(textsim, "embed", down)
+    fake_db.add_signup(waitlist_id="wl", transcript=STORY)
+    s = fake_db.add_signup(waitlist_id="wl")
+    assert same_answer_flags(s, PARAPHRASE) == []

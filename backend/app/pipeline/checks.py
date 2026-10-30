@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -6,11 +7,16 @@ from disposable_email_domains import blocklist
 from email_validator import EmailNotValidError, caching_resolver, validate_email
 
 from app import db
+from app.config import get_settings
+from app.pipeline import textsim
 
+log = logging.getLogger("pod.checks")
 REPEAT_IP_MIN = 3          # this many signups (including this one) from one network...
 REPEAT_IP_WINDOW = timedelta(hours=24)  # ...within this window
 SAME_ANSWER_MIN_WORDS = 8     # shorter answers ("sounds cool") collide by chance
-SAME_ANSWER_RATIO = 0.9       # word-level similarity that counts as a copied script
+SAME_ANSWER_RATIO = 0.8       # word-level: copies 0.88+, different genuine stories <= 0.13
+SAME_MEANING_MIN_WORDS = 15   # meaning check only on real stories; short generic ones are alike
+SAME_MEANING_COSINE = 0.9     # paraphrases 0.92-0.94, different genuine stories <= 0.56
 GMAIL = {"gmail.com", "googlemail.com"}
 
 _resolver = None
@@ -60,9 +66,24 @@ def same_answer_flags(signup: dict, transcript: str) -> list[dict]:
     words = _words(transcript)
     if len(words) < SAME_ANSWER_MIN_WORDS:
         return []
-    for other in db.earlier_transcripts(signup["waitlist_id"], signup["id"], signup["created_at"]):
+    earlier = db.earlier_transcripts(signup["waitlist_id"], signup["id"], signup["created_at"])
+    for other in earlier:
         if SequenceMatcher(None, words, _words(other["transcript"] or "")).ratio() >= SAME_ANSWER_RATIO:
             return [flag("same_answer", other["id"])]
+    # Paraphrased scripts (an LLM rewording one answer for a click farm) keep the meaning.
+    long_ones = {o["id"]: o["transcript"] for o in earlier
+                 if len(_words(o["transcript"] or "")) >= SAME_MEANING_MIN_WORDS}
+    if len(words) < SAME_MEANING_MIN_WORDS or not long_ones or not get_settings().openai_api_key:
+        return []
+    try:
+        vecs = textsim.embed({signup["id"]: transcript, **long_ones})
+    except Exception as e:   # the word check above still stands
+        log.warning("meaning check skipped: %s", e)
+        return []
+    mine = vecs[signup["id"]]
+    best = max(long_ones, key=lambda oid: float(mine @ vecs[oid]))
+    if float(mine @ vecs[best]) >= SAME_MEANING_COSINE:
+        return [flag("same_answer", best)]
     return []
 
 
