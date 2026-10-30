@@ -99,6 +99,7 @@ export default function Widget({ waitlist, depositDone }: { waitlist: Waitlist; 
     e.preventDefault();
     if (!consent) return setError(ERRORS.no_consent);
     if (!skipVoice && !audio) return setError("Record your answer first, or skip voice.");
+    if (!BACKEND) return setError("Signups aren't connected yet (NEXT_PUBLIC_BACKEND_URL is not set).");
     setSubmitting(true);
     setError("");
     try {
