@@ -1,0 +1,20 @@
+# Backend only, for a server whose existing nginx handles 80/443 (see nginx-pod-api.conf).
+# Run from this folder:  docker compose -f docker-compose.nginx.yml up -d --build
+services:
+  backend:
+    build: ..
+    image: pod-backend
+    restart: unless-stopped
+    environment:
+      PORT: "8000"
+    volumes:
+      - ../.env:/app/.env:ro
+    ports:
+      - "127.0.0.1:8000:8000"         # localhost only; nginx proxies to it
+    mem_limit: 1500m                  # protect the other apps on a shared server
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
