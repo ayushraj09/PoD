@@ -39,15 +39,37 @@ def test_find_ring_rule(members, voice_links, ring):
     assert bool(graph.find_ring(conn, "a")) is ring
 
 
-def test_mark_ring_recomputes_verdict(fake_db):
+def test_mark_ring_keeps_clean_original(fake_db):
     a = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x", flags=[],
                            trust_score=100, human_verdict="verified")
     b = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
                            flags=[{"code": "same_voice", "detail": a["id"]}])
-    assert graph.mark_ring([a["id"], b["id"]]) == 2
-    assert fake_db.signups[a["id"]]["human_verdict"] == "suspicious"   # 100 - 40
-    assert fake_db.signups[b["id"]]["human_verdict"] == "fake"         # 100 - 50 - 40
-    assert graph.mark_ring([a["id"], b["id"]]) == 0                    # idempotent
+    c = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
+                           flags=[{"code": "same_voice", "detail": a["id"]}])
+    assert graph.mark_ring([a["id"], b["id"], c["id"]]) == 2
+    assert fake_db.signups[a["id"]]["human_verdict"] == "verified"   # 1 real human ...
+    assert fake_db.signups[b["id"]]["human_verdict"] == "fake"       # ... with extra accounts
+    assert fake_db.signups[c["id"]]["human_verdict"] == "fake"
+    assert graph.mark_ring([a["id"], b["id"], c["id"]]) == 0         # idempotent
+
+
+def test_original_with_own_flags_is_not_exempt(fake_db):
+    a = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
+                           flags=[{"code": "possible_ai_voice"}])
+    b = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
+                           flags=[{"code": "same_voice", "detail": a["id"]}])
+    graph.mark_ring([a["id"], b["id"]])
+    assert "ring_member" in [f["code"] for f in fake_db.signups[a["id"]]["flags"]]
+
+
+def test_previously_flagged_original_is_restored(fake_db):
+    a = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
+                           flags=[{"code": "ring_member", "detail": "group of 3"}],
+                           human_verdict="suspicious")
+    b = fake_db.add_signup(waitlist_id="wl", status="scored", audio_path="x",
+                           flags=[{"code": "same_voice", "detail": a["id"]}])
+    graph.mark_ring([a["id"], b["id"]])
+    assert fake_db.signups[a["id"]]["human_verdict"] == "verified"
 
 
 def test_check_ring_never_raises(monkeypatch):

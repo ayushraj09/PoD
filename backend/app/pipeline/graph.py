@@ -69,20 +69,34 @@ def find_ring(conn, signup_id: str) -> list[str]:
     return sorted(members) if len(members) >= RING_MIN and voice_links > 0 else []
 
 
+def _set_flags(row: dict, flags: list[dict]) -> None:
+    trust, verdict = decide(flags, has_audio=bool(row.get("audio_path")))
+    db.update_signup(row["id"], {"flags": flags, "trust_score": trust, "human_verdict": verdict})
+
+
 def mark_ring(member_ids: list[str]) -> int:
-    """Adds ring_member to every member and recomputes its verdict. Returns rows changed."""
+    """Flags ring members and recomputes their verdicts. Returns rows changed.
+
+    A ring is usually one real person behind many accounts, so its earliest member keeps its
+    verdict if its own checks were clean: "1 real human, 8 accounts", not 0. A member that
+    tripped any check itself (AI audio, copied script, throwaway email, ...) is never exempt.
+    """
+    rows = [r for r in (db.get_signup(m) for m in member_ids) if r and r.get("status") == "scored"]
+    rows.sort(key=lambda r: r["created_at"])
+    own = lambda r: [f for f in r.get("flags") or [] if f["code"] != "ring_member"]
+    original = rows[0]["id"] if rows and not own(rows[0]) else None
     changed = 0
-    for mid in member_ids:
-        row = db.get_signup(mid)
-        if not row or row.get("status") != "scored":
-            continue
+    for row in rows:
         flags = row.get("flags") or []
-        if any(f["code"] == "ring_member" for f in flags):
+        in_ring = any(f["code"] == "ring_member" for f in flags)
+        if row["id"] == original:
+            if in_ring:   # flagged by an earlier version of this rule
+                _set_flags(row, own(row))
+                changed += 1
             continue
-        flags = flags + [flag("ring_member", f"group of {len(member_ids)}")]
-        trust, verdict = decide(flags, has_audio=bool(row.get("audio_path")))
-        db.update_signup(mid, {"flags": flags, "trust_score": trust, "human_verdict": verdict})
-        changed += 1
+        if not in_ring:
+            _set_flags(row, flags + [flag("ring_member", f"group of {len(member_ids)}")])
+            changed += 1
     return changed
 
 

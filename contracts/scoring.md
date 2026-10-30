@@ -30,7 +30,7 @@ A JSON list of objects `{"code": "...", "detail": "..."}`. Codes:
 | `no_speech` | Recording has no clear speech |
 | `too_short` | Answer under 3 seconds |
 | `same_answer` | Answer is word-for-word the same as another signup (`detail` = that signup id) |
-| `ring_member` | Part of a connected group of suspicious signups |
+| `ring_member` | Part of a connected group of suspicious signups (the group's earliest signup is not flagged if its own checks were clean: one real person counts once) |
 | `processing_error` | Scoring failed; will show as unverified |
 
 ## Trust score
