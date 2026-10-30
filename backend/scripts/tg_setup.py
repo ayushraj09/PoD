@@ -26,11 +26,33 @@ def run(conn, label: str, statement: str) -> str:
     return out if isinstance(out, str) else repr(out)
 
 
+def backfill(slug: str) -> None:
+    """Repairs graph writes lost while the workspace was asleep, then re-checks every ring."""
+    from app import db
+    from app.pipeline.graph import _with_retry, check_ring, write_signup
+
+    wl = db.get_waitlist_by_slug(slug)
+    rows = db.client().table("signups").select("*").eq("waitlist_id", wl["id"]) \
+        .eq("status", "scored").order("created_at").execute().data
+    for r in rows:
+        _with_retry(lambda c, row=r: write_signup(c, row))
+    for r in rows:
+        check_ring(db.get_signup(r["id"]))
+    for r in rows:
+        r = db.get_signup(r["id"])
+        print(f"{r['email'][:28]:28} {r['human_verdict']:>10} trust={r['trust_score']} "
+              f"flags={[f['code'] for f in r['flags']]}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="connect and list only")
     ap.add_argument("--query", action="store_true", help="only (re)install ring_of")
+    ap.add_argument("--backfill", metavar="SLUG", help="re-write a waitlist's signups and re-check rings")
     args = ap.parse_args()
+    if args.backfill:
+        backfill(args.backfill)
+        return
 
     s = get_settings()
     if not (s.tg_host and s.tg_graph and s.tg_secret):

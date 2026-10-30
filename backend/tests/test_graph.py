@@ -60,3 +60,16 @@ def test_check_ring_never_raises(monkeypatch):
 def test_skipped_without_host(monkeypatch):
     monkeypatch.setattr(graph, "_connect", lambda: pytest.fail("should not connect"))
     graph.check_ring({"id": "s1", "waitlist_id": "wl", "email": "a@b.com"})
+
+
+def test_linked_signups_are_rewritten(monkeypatch, fake_db):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "tg_host", "https://example.tgcloud.io")
+    first = fake_db.add_signup(waitlist_id="wl", status="scored", email="a@b.com")
+    second = fake_db.add_signup(waitlist_id="wl", status="scored", email="c@d.com",
+                                flags=[{"code": "same_voice", "detail": first["id"]}])
+    conn = FakeConn([{"members": [], "voice_links": 0}])
+    monkeypatch.setattr(graph, "_connect", lambda: conn)
+    graph.check_ring(second)
+    written = [vid for vtype, vid in conn.vertices if vtype == "Signup"]
+    assert second["id"] in written and first["id"] in written

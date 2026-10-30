@@ -14,7 +14,7 @@ from app.pipeline.verdict import decide
 
 log = logging.getLogger("pod.graph")
 RING_MIN = 3
-RETRIES = 4  # free workspaces auto-stop; the request that wakes one is not queued
+RETRIES = 6  # free workspaces auto-stop; waking takes ~15-30 s and that request isn't queued (~60 s total)
 
 _conn = None
 
@@ -86,12 +86,23 @@ def mark_ring(member_ids: list[str]) -> int:
     return changed
 
 
+def linked_signup_ids(signup: dict) -> list[str]:
+    return sorted({f["detail"] for f in signup.get("flags") or []
+                   if f["code"] in ("same_voice", "repeat_device") and f.get("detail")})
+
+
 def check_ring(signup: dict) -> None:
     """Runs after scoring. Never raises: signups must not fail because of the graph."""
     if not get_settings().tg_host:
         return
     try:
         _with_retry(lambda c: write_signup(c, signup))
+        # Self-repair: re-write the earlier signups this one points at. If TigerGraph was asleep
+        # when they were scored, their writes were lost and the ring would miss them.
+        for linked_id in linked_signup_ids(signup):
+            linked = db.get_signup(linked_id)
+            if linked and linked.get("status") == "scored":
+                _with_retry(lambda c, row=linked: write_signup(c, row))
         members = _with_retry(lambda c: find_ring(c, signup["id"]))
         if members:
             n = mark_ring(members)
