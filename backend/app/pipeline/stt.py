@@ -1,4 +1,5 @@
-"""Speech to text: Sarvam saaras:v3 (Indian languages) with OpenAI as fallback.
+"""Speech to text: Smallest Pulse (AI Grants credits), with Sarvam saaras:v3 and OpenAI as
+fallbacks. Providers without a key are skipped.
 
 Check command: python -m app.pipeline.stt tests/samples/
 """
@@ -16,6 +17,31 @@ TIMEOUT_S = 20
 
 class STTError(Exception):
     pass
+
+
+SMALLEST_URL = "https://api.smallest.ai/waves/v1/stt/"
+
+
+def _smallest(wav_path: Path) -> tuple[str, str | None]:
+    import httpx
+
+    s = get_settings()
+    if not s.smallest_api_key:
+        raise STTError("SMALLEST_API_KEY not set")
+    audio = wav_path.read_bytes()
+    headers = {"Authorization": f"Bearer {s.smallest_api_key}", "Content-Type": "audio/wav"}
+    # multi-indic (en + North Indian languages) is region-limited; fall back to plain English
+    for language in dict.fromkeys([s.smallest_stt_language, "en"]):
+        r = httpx.post(SMALLEST_URL, params={"model": s.smallest_stt_model, "language": language},
+                       headers=headers, content=audio, timeout=TIMEOUT_S)
+        if r.status_code in (400, 422) and language != "en":
+            log.warning("smallest rejected language=%s (%s), retrying with en",
+                        language, r.text[:200])
+            continue
+        r.raise_for_status()
+        body = r.json()
+        return (body.get("transcription") or "").strip(), body.get("language") or language
+    raise STTError("smallest: no language accepted")
 
 
 def _sarvam(wav_path: Path) -> tuple[str, str | None]:
@@ -46,12 +72,12 @@ def _openai(wav_path: Path) -> tuple[str, str | None]:
     return (r.text or "").strip(), None
 
 
-PROVIDERS = {"sarvam": _sarvam, "openai": _openai}
+PROVIDERS = {"smallest": _smallest, "sarvam": _sarvam, "openai": _openai}
 
 
 def transcribe(wav_path: Path) -> tuple[str, str | None]:
-    """Returns (text, language_code). Tries STT_PROVIDER first, then the other one."""
-    first = get_settings().stt_provider if get_settings().stt_provider in PROVIDERS else "sarvam"
+    """Returns (text, language_code). Tries STT_PROVIDER first, then the others."""
+    first = get_settings().stt_provider if get_settings().stt_provider in PROVIDERS else "smallest"
     order = [first] + [p for p in PROVIDERS if p != first]
     errors = []
     for name in order:

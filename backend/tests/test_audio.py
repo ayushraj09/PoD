@@ -61,3 +61,24 @@ def test_stt_raises_when_all_fail(monkeypatch, tmp_path):
     monkeypatch.setitem(stt.PROVIDERS, "openai", broken)
     with pytest.raises(stt.STTError):
         stt.transcribe(tmp_path / "x.wav")
+
+
+def test_smallest_retries_with_english(monkeypatch, tmp_path):
+    import httpx
+
+    wav = tmp_path / "x.wav"
+    wav.write_bytes(b"RIFF")
+    seen = []
+
+    def fake_post(url, params, headers, content, timeout):
+        seen.append(params["language"])
+        req = httpx.Request("POST", url)
+        if params["language"] == "multi-indic":
+            return httpx.Response(400, text="language not available in region", request=req)
+        return httpx.Response(200, json={"status": "success", "transcription": " hello "},
+                              request=req)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(get_settings(), "smallest_api_key", "test")
+    assert stt._smallest(wav) == ("hello", "en")
+    assert seen == ["multi-indic", "en"]

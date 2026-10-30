@@ -30,3 +30,12 @@ def test_transcript_is_fenced_as_data():
     user = msgs[1]["content"]
     assert user.count("</transcript>") == 1 and user.rstrip().endswith("</transcript>")
     assert "UNTRUSTED DATA" in msgs[0]["content"]
+
+
+def test_llm_options_per_model_family():
+    from types import SimpleNamespace as S
+    assert pain.llm_options(S(llm_model="gpt-5-nano", llm_reasoning_effort="minimal")) == {
+        "reasoning_effort": "minimal"}
+    assert pain.llm_options(S(llm_model="gpt-5-nano", llm_reasoning_effort="")) == {}
+    assert pain.llm_options(S(llm_model="gpt-4o-mini", llm_reasoning_effort="")) == {
+        "temperature": 0, "seed": 7}

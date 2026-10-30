@@ -82,10 +82,17 @@ def _call_llm(messages: list[dict]) -> dict:
     s = get_settings()
     client = OpenAI(api_key=s.openai_api_key, max_retries=1)
     resp = client.chat.completions.create(
-        model=s.llm_model, temperature=0, seed=7, messages=messages,
-        response_format={"type": "json_schema", "json_schema": SCHEMA}, timeout=TIMEOUT_S,
+        model=s.llm_model, messages=messages, timeout=TIMEOUT_S,
+        response_format={"type": "json_schema", "json_schema": SCHEMA}, **llm_options(s),
     )
     return json.loads(resp.choices[0].message.content)
+
+
+def llm_options(s) -> dict:
+    # gpt-5 family models only accept the default temperature; steer them with reasoning effort
+    if s.llm_model.startswith("gpt-5"):
+        return {"reasoning_effort": s.llm_reasoning_effort} if s.llm_reasoning_effort else {}
+    return {"temperature": 0, "seed": 7}
 
 
 def score_pain(transcript: str, product_description: str, question: str) -> dict:
