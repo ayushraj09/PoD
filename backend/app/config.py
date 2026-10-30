@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_transcribe_model: str = "gpt-4o-transcribe"
     llm_model: str = "gpt-5-nano"
-    llm_reasoning_effort: str = "minimal"  # gpt-5 family only; empty = model default
+    llm_reasoning_effort: str = "low"  # gpt-5 family; "low" scored 20/20 vs 17/20 for "minimal"
 
     voice_match_threshold: float = 0.6
     notify_webhook_url: str = ""

@@ -1,6 +1,7 @@
 """process_signup(signup_id): runs every scoring step in order and writes the result back."""
 
 import logging
+import re
 import tempfile
 import time
 from contextlib import contextmanager
@@ -49,6 +50,10 @@ def score(signup: dict, waitlist: dict, flags: list[dict]) -> dict:
                 with step(sid, "stt"):
                     text, lang = stt.transcribe(clean.wav_path)
             out.update(transcript=text, language=lang)
+            if has_speech and len(re.findall(r"\w+", text)) < 2:
+                # loud but no words (beeps, music, noise bursts): not a person answering
+                flags.append(flag("no_speech", "no words recognised"))
+                has_speech = False
             with step(sid, "same_answer"):
                 flags += same_answer_flags(signup, text)
 

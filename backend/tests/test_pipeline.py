@@ -121,3 +121,13 @@ def test_voice_step_skipped_without_model(fake_db, stubs, tmp_path, monkeypatch)
     run.process_signup(s["id"])
     row = fake_db.signups[s["id"]]
     assert row["human_verdict"] == "verified" and "voice_embedding" not in row
+
+
+def test_loud_audio_without_words_is_no_speech(fake_db, stubs, tmp_path, monkeypatch):
+    monkeypatch.setattr(stt, "transcribe", lambda wav: ("", None))   # beeps: STT hears nothing
+    monkeypatch.setattr(voice, "embed", lambda wav: pytest.fail("no voice to fingerprint"))
+    s = signup_with_audio(fake_db, recording(tmp_path))
+    run.process_signup(s["id"])
+    row = fake_db.signups[s["id"]]
+    assert "no_speech" in [f["code"] for f in row["flags"]]
+    assert row["human_verdict"] != "verified"
